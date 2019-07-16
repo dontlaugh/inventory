@@ -18,6 +18,7 @@ fn main() -> Result<(), Error> {
     let default_config = home_with(".config/inventory/config.toml");
     create_dir(&default_dir.clone())?;
     let app = App::new("inventory")
+        .about("print resources across multiple AWS accounts")
         .version(VERSION)
         .arg(
             Arg::with_name("config")
