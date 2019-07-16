@@ -11,7 +11,7 @@ use std::str::FromStr;
 use prettytable::{Table, row, cell};
 use prettytable::format::TableFormat;
 
-const VERSION: &'static str = "0.1.0";
+const VERSION: &'static str = "0.2.0";
 
 fn main() -> Result<(), Error> {
     let default_dir = home_with(".config/inventory/");
@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
                 .short("c")
                 .default_value(&default_config),
         )
-        .subcommand(SubCommand::with_name("ec2"));
+        .subcommand(SubCommand::with_name("ec2").about("print EC2 instances"));
 
     let matches = app.get_matches();
     let config_path = matches.value_of("config").unwrap();
