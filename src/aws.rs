@@ -105,3 +105,12 @@ pub fn extract_tag_by_key(tags: Option<Vec<rusoto_ec2::Tag>>, key: &str) -> Opti
     }
     None
 }
+
+// TODO make the above horrible-looking function sexier
+//pub fn extract_tag_by_key_nicer(mut tags: Option<Vec<rusoto_ec2::Tag>>, key: &str) -> Option<String> {
+//    // find needs tags to be mut
+//    tags.map(|ttags| {
+//        // key and value on a tag are Option<String>
+//        ttags.iter_mut().find(|tag| tag.key.unwrap_or("".to_string()) == key)
+//    })
+//}
