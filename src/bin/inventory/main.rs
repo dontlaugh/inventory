@@ -3,13 +3,13 @@ use failure::Error;
 use inventory::aws::*;
 use inventory::config::*;
 use molt;
+use prettytable::format::TableFormat;
+use prettytable::{cell, row, Table};
 use rusoto_core::Region;
 use rusoto_ec2::Instance;
 use std::env;
 use std::path::Path;
 use std::str::FromStr;
-use prettytable::{Table, row, cell};
-use prettytable::format::TableFormat;
 
 const VERSION: &'static str = "0.2.0";
 
@@ -24,7 +24,13 @@ fn main() -> Result<(), Error> {
             Arg::with_name("config")
                 .long("config")
                 .short("c")
+                .takes_value(true)
                 .default_value(&default_config),
+        )
+        .arg(
+            Arg::with_name("no-headers")
+                .long("no-headers")
+                .takes_value(false),
         )
         .subcommand(SubCommand::with_name("ec2").about("print EC2 instances"));
 
@@ -34,13 +40,16 @@ fn main() -> Result<(), Error> {
 
     // Create Tcl interpreter
     let mut interp = molt::Interp::new();
+    let no_headers = matches.is_present("no-headers");
 
     if let Some(_) = matches.subcommand_matches("ec2") {
         let mut table = Table::new();
         let mut format = TableFormat::new();
         format.column_separator('\t');
         table.set_format(format);
-        table.set_titles(row!("Name", "ID", "Type", "Private IP", "AMI"));
+        if !no_headers {
+            table.set_titles(row!("Name", "ID", "Type", "Private IP", "AMI"));
+        }
         for ctx in config.aws_context {
             let region = Region::from_str(&ctx.region)?;
             let instances: Vec<Instance> = get_ec2_instances(region, ctx.account, ctx.role)?;
@@ -48,7 +57,11 @@ fn main() -> Result<(), Error> {
                 let private_ip = i.private_ip_address.unwrap_or("<none>".to_string());
                 let instance_type = i.instance_type.unwrap_or("UNKNOWN".to_string());
                 let ami = i.image_id.unwrap_or("<none>".to_string());
-                let _role = i.iam_instance_profile.map(|prof| prof.arn ).unwrap_or(Some("<none>".to_string())).unwrap();
+                let _role = i
+                    .iam_instance_profile
+                    .map(|prof| prof.arn)
+                    .unwrap_or(Some("<none>".to_string()))
+                    .unwrap();
                 let sss = ctx.script.clone();
                 if let Some(script) = sss {
                     // TODO: eval dynamic Tcl script to let people create custom tables
