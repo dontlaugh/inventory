@@ -71,14 +71,14 @@ fn main() -> Result<(), Error> {
                     println!("{}", result);
                 } else {
                     // Default formatting
-
                     let name = extract_tag_by_key(i.tags, "Name").unwrap_or("<none>".to_string());
                     let row = row!(name, i.instance_id.unwrap(), instance_type, private_ip, ami);
                     table.add_row(row);
                 }
             }
         }
-        table.printstd();
+        let mut out = std::io::stdout();
+        table.print(&mut out).ok();
         return Ok(());
     }
 
