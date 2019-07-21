@@ -36,6 +36,7 @@ impl Inventory {
         }
     }
 
+    /// Add the group if it does not exist.
     pub fn add_group(&mut self, group: &str) {
         // check if group exists
         let g = &self.data[group];
@@ -48,23 +49,18 @@ impl Inventory {
         self.data[group] = json!({ "children": [], "vars": {} });
     }
 
+    
+
     /// Sets a group var. Adds the group if it does not exist.
     pub fn add_group_var<T>(&mut self, group: &str, key: &str, value: T)
     where
         T: Into<serde_json::Value> + Serialize,
     {
-        let mut exists = false;
-        let g = &self.data[group];
-        if *g != serde_json::Value::Null {
-            exists = true;
-        }
-        if !exists {
-            self.add_group(group);
-        }
+        self.add_group(group);
         self.data[group]["vars"][key] = value.into();
     }
 
-    // pub fn add_group_vars
+    // TODO: pub fn add_group_vars
 
     // pub fn add_group_child
 
