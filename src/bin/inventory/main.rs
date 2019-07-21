@@ -40,14 +40,15 @@ fn main() -> Result<(), Error> {
         let mut format = TableFormat::new();
         format.column_separator('\t');
         table.set_format(format);
-        table.set_titles(row!("Name", "ID", "Type", "Private IP", "Role"));
+        table.set_titles(row!("Name", "ID", "Type", "Private IP", "AMI"));
         for ctx in config.aws_context {
             let region = Region::from_str(&ctx.region)?;
             let instances: Vec<Instance> = get_ec2_instances(region, ctx.account, ctx.role)?;
             for i in instances {
                 let private_ip = i.private_ip_address.unwrap_or("<none>".to_string());
                 let instance_type = i.instance_type.unwrap_or("UNKNOWN".to_string());
-                let role = i.iam_instance_profile.map(|prof| prof.arn ).unwrap_or(Some("<none>".to_string())).unwrap();
+                let ami = i.image_id.unwrap_or("<none>".to_string());
+                let _role = i.iam_instance_profile.map(|prof| prof.arn ).unwrap_or(Some("<none>".to_string())).unwrap();
                 let sss = ctx.script.clone();
                 if let Some(script) = sss {
                     // TODO: eval dynamic Tcl script to let people create custom tables
@@ -59,7 +60,7 @@ fn main() -> Result<(), Error> {
                     // Default formatting
 
                     let name = extract_tag_by_key(i.tags, "Name").unwrap_or("<none>".to_string());
-                    let row = row!(name, i.instance_id.unwrap(), instance_type, private_ip, role);
+                    let row = row!(name, i.instance_id.unwrap(), instance_type, private_ip, ami);
                     table.add_row(row);
                 }
             }
