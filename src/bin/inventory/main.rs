@@ -90,7 +90,7 @@ fn main() -> Result<(), Error> {
 
 /// Join a path to the HOME directory. Panics on any error. HOME env var must be set.
 fn home_with(path: &'static str) -> String {
-    Path::new(&env::var("HOME").unwrap())
+    Path::new(&env::var("HOME").expect("HOME env var unset"))
         .join(path)
         .to_str()
         .unwrap()
