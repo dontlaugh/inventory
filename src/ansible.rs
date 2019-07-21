@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use serde_json;
 use serde_json::json;
 
@@ -8,28 +9,6 @@ https://stackoverflow.com/questions/49783039/how-to-create-custom-json-structure
 https://docs.ansible.com/ansible/latest/dev_guide/developing_inventory.html#developing-inventory-scripts
 https://docs.ansible.com/ansible/latest/plugins/inventory/script.html
 
-goals:
-* provide a default implmentatino
-*
-
-data structure:
-
-```
-{
-    "_meta": {
-      "hostvars": {}
-    },
-    "all": {
-      "children": [
-        "ungrouped"
-      ]
-    },
-    "ungrouped": {
-      "children": [
-      ]
-    }
-}
-```
 */
 
 struct Inventory {
@@ -68,7 +47,12 @@ impl Inventory {
         self.data[group] = json!({ "children": [], "vars": {} });
     }
 
-    // pub fn add_group_var
+    pub fn add_group_var<T>(&mut self, group: &str, key: &str, value: T)
+    where
+        T: Into<serde_json::Value>,
+    {
+
+    }
 
     // pub fn add_group_vars
 
@@ -127,9 +111,6 @@ fn test_add_group() {
     let expected: serde_json::Value = serde_json::from_str(expected_str).unwrap();
     let actual: serde_json::Value = serde_json::from_str(&i.to_string()).unwrap();
     assert_eq!(expected, actual);
-
-
-    
 }
 
 /// Empty is the minimum valid json for ansible inventory
