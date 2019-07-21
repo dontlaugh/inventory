@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 use serde::Serialize;
-use serde_json;
-use serde_json::json;
+use serde_json::{json, Value};
 
 /*
 
@@ -12,23 +11,27 @@ https://docs.ansible.com/ansible/latest/plugins/inventory/script.html
 
 */
 
+const ALL: &'static str = "all";
+const UNGROUPED: &'static str = "ungrouped";
+const META: &'static str = "_meta";
+
 struct Inventory {
-    data: serde_json::Value,
+    data: Value,
 }
 
 impl Inventory {
     pub fn new() -> Self {
         Inventory {
             data: json!({
-                "_meta": {
+                META: {
                   "hostvars": {}
                 },
-                "all": {
+                ALL: {
                   "children": [
-                    "ungrouped"
+                    UNGROUPED
                   ]
                 },
-                "ungrouped": {
+                UNGROUPED: {
                   "children": [
                   ]
                 }
@@ -40,21 +43,26 @@ impl Inventory {
     pub fn add_group(&mut self, group: &str) {
         // check if group exists
         let g = &self.data[group];
-        if *g != serde_json::Value::Null {
+        if *g != Value::Null {
             return;
         }
 
         // vars is an object, children is a list of string which must
         // correspond to a top-level group name key.
         self.data[group] = json!({ "children": [], "vars": {} });
-    }
 
-    
+        // every group needs to be added to the "all" group's children
+        assert!(self.data[ALL]["children"].is_array());
+        self.data[ALL]["children"]
+            .as_array_mut()
+            .unwrap()
+            .push(Value::String(group.to_string()));
+    }
 
     /// Sets a group var. Adds the group if it does not exist.
     pub fn add_group_var<T>(&mut self, group: &str, key: &str, value: T)
     where
-        T: Into<serde_json::Value> + Serialize,
+        T: Into<Value> + Serialize,
     {
         self.add_group(group);
         self.data[group]["vars"][key] = value.into();
@@ -64,7 +72,20 @@ impl Inventory {
 
     // pub fn add_group_child
 
-    // pub fn add_host
+    pub fn add_host(&mut self, group: Option<&str>, host: &str) {
+        let group = group.unwrap_or(UNGROUPED);
+
+        self.add_group(group);
+        let hosts = &self.data[group]["hosts"];
+        if *hosts == Value::Null {
+            self.data[group]["hosts"] = json!([]);
+        }
+        assert!(self.data[group]["hosts"].is_array());
+        self.data[group]["hosts"]
+            .as_array_mut()
+            .unwrap()
+            .push(Value::String("host".to_string()));
+    }
 
     // pub fn add_host_var
 
@@ -77,8 +98,8 @@ impl Inventory {
 fn test_new() {
     let i = Inventory::new();
 
-    let data: serde_json::Value = serde_json::from_str(EMPTY).unwrap();
-    let data1: serde_json::Value = serde_json::from_str(&i.to_string()).unwrap();
+    let data: Value = serde_json::from_str(EMPTY).unwrap();
+    let data1: Value = serde_json::from_str(&i.to_string()).unwrap();
     assert_eq!(data, data1);
 }
 
@@ -105,7 +126,9 @@ fn test_add_group() {
         },
         "all": {
             "children": [
-            "ungrouped"
+            "ungrouped",
+            "foo",
+            "baz"
             ]
         },
         "ungrouped": {
@@ -114,8 +137,8 @@ fn test_add_group() {
         }
     }
     "#;
-    let expected: serde_json::Value = serde_json::from_str(expected_str).unwrap();
-    let actual: serde_json::Value = serde_json::from_str(&i.to_string()).unwrap();
+    let expected: Value = serde_json::from_str(expected_str).unwrap();
+    let actual: Value = serde_json::from_str(&i.to_string()).unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -150,6 +173,31 @@ fn test_add_group_var() {
         },
         "all": {
             "children": [
+            "ungrouped",
+            "foo",
+            "baz"
+            ]
+        },
+        "ungrouped": {
+            "children": [
+            ]
+        }
+    }
+    "#;
+    let expected: Value = serde_json::from_str(expected_str).unwrap();
+    let actual: Value = serde_json::from_str(&i.to_string()).unwrap();
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_add_host() {
+    let expected_str = r#"
+    {
+        "_meta": {
+            "hostvars": {}
+        },
+        "all": {
+            "children": [
             "ungrouped"
             ]
         },
@@ -159,9 +207,6 @@ fn test_add_group_var() {
         }
     }
     "#;
-    let expected: serde_json::Value = serde_json::from_str(expected_str).unwrap();
-    let actual: serde_json::Value = serde_json::from_str(&i.to_string()).unwrap();
-    assert_eq!(expected, actual);
 }
 /// Empty is the minimum valid json for ansible inventory
 #[cfg(test)]
