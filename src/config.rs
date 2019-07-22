@@ -8,6 +8,7 @@ use toml;
 /// The context config
 #[derive(Serialize, Deserialize)]
 pub struct Config {
+    pub ansible_inventory_script: Option<String>,
     pub aws_context: Vec<AwsContext>,
 }
 

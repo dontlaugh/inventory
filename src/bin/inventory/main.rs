@@ -11,6 +11,7 @@ use rusoto_ec2::Instance;
 use std::env;
 use std::path::Path;
 use std::str::FromStr;
+use std::rc::Rc;
 
 const VERSION: &'static str = "0.2.0";
 
@@ -103,35 +104,50 @@ fn main() -> Result<(), Error> {
 }
 
 fn ansible_inventory(config: &Config) -> Result<(), Error> {
+    // All the fields
+    // https://rusoto.github.io/rusoto/rusoto_ec2/struct.Instance.html
     let mut interp = molt::Interp::new();
     let aws_contexts = config.aws_context.clone();
+    let script = config.ansible_inventory_script.clone().unwrap();
+    let mut inv = ansible::Inventory::new();
 
     for ctx in aws_contexts {
         let region = Region::from_str(&ctx.region)?;
         let instances: Vec<Instance> = get_ec2_instances(region, ctx.account, ctx.role)?;
         for i in instances {
+            // private ip, ami, every tag
             let private_ip = i.private_ip_address.unwrap_or("<none>".to_string());
-            let instance_type = i.instance_type.unwrap_or("UNKNOWN".to_string());
             let ami = i.image_id.unwrap_or("<none>".to_string());
-            let _role = i
-                .iam_instance_profile
-                .map(|prof| prof.arn)
-                .unwrap_or(Some("<none>".to_string()))
-                .unwrap();
-            let sss = ctx.script.clone();
-            if let Some(script) = sss {
-                // TODO: eval dynamic Tcl script to let people create custom tables
-                interp.set_var("private_ip", &molt::Value::from(private_ip));
-                interp.eval_body(&script).unwrap();
-                let result = interp.var("output").expect("molt result");
-                println!("{}", result);
-            } else {
-                // Default formatting
-                let name = extract_tag_by_key(i.tags, "Name").unwrap_or("<none>".to_string());
-                let row = row!(name, i.instance_id.unwrap(), instance_type, private_ip, ami);
+            let key_name = i.key_name.unwrap_or("<none>".to_string());
+            let mut tags = Vec::<molt::Value>::new();
+            if let Some(tt) = i.tags {
+                for t in tt {
+                    if t.key.is_none() {
+                        continue;
+                    }
+                    // we MUST have a key, but we may not have a value. Replace with <none> for Tcl.
+                    tags.push(t.key.unwrap().into());
+                    tags.push(t.value.unwrap_or("<none>".to_string()).into());
+                }
             }
+            interp.set_var("key_name", &molt::Value::from(key_name));
+            interp.set_var("private_ip", &molt::Value::from(private_ip));
+            interp.set_var("ami", &molt::Value::from(ami));
+            interp.set_var("tags", &molt::MoltList::from(tags).into());            
+            interp.eval_body(&script).unwrap();
+            let group: Option<Rc<String>> = interp.var("group").ok().map(|g| g.as_string());
+            let host = interp.var("host").ok().map(|h| h.as_string());
+            let group_vars = interp.var("group_vars").ok().map(|gv| gv.as_list());
+
+            if let Some(host) = host {
+
+            } else {
+                continue;
+            }
+
         }
     }
+    println!("{}", inv.to_string());
     Ok(())
 }
 
