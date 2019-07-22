@@ -32,7 +32,7 @@ impl Inventory {
                   ]
                 },
                 UNGROUPED: {
-                  "children": [
+                  "hosts": [
                   ]
                 }
             }),
@@ -84,12 +84,13 @@ impl Inventory {
         self.data[group]["hosts"]
             .as_array_mut()
             .unwrap()
-            .push(Value::String("host".to_string()));
+            .push(Value::String(host.to_string()));
     }
 
-    // pub fn add_host_var
+    // TODO: pub fn add_host_var
 
     pub fn to_string(&self) -> String {
+        // map all hosts into the _meta key
         self.data.to_string()
     }
 }
@@ -132,7 +133,7 @@ fn test_add_group() {
             ]
         },
         "ungrouped": {
-            "children": [
+            "hosts": [
             ]
         }
     }
@@ -179,7 +180,7 @@ fn test_add_group_var() {
             ]
         },
         "ungrouped": {
-            "children": [
+            "hosts": [
             ]
         }
     }
@@ -191,22 +192,37 @@ fn test_add_group_var() {
 
 #[test]
 fn test_add_host() {
+    let mut i = Inventory::new();
+    i.add_host(None, "ungrouped-host-001");
+    i.add_host(Some("groupA"), "groupA-host-001");
     let expected_str = r#"
     {
         "_meta": {
             "hostvars": {}
         },
+        "groupA": {
+            "children": [],
+            "hosts": [
+                "groupA-host-001"
+            ],
+            "vars": {}
+        },
         "all": {
             "children": [
-            "ungrouped"
+            "ungrouped",
+            "groupA"
             ]
         },
         "ungrouped": {
-            "children": [
+            "hosts": [
+                "ungrouped-host-001"
             ]
         }
     }
     "#;
+        let expected: Value = serde_json::from_str(expected_str).unwrap();
+    let actual: Value = serde_json::from_str(&i.to_string()).unwrap();
+    assert_eq!(expected, actual);
 }
 /// Empty is the minimum valid json for ansible inventory
 #[cfg(test)]
@@ -221,7 +237,7 @@ const EMPTY: &'static str = r#"
             ]
         },
         "ungrouped": {
-            "children": [
+            "hosts": [
             ]
         }
     }
