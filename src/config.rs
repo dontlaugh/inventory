@@ -11,7 +11,7 @@ pub struct Config {
     pub aws_context: Vec<AwsContext>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AwsContext {
     pub region: String,
     pub account: String,

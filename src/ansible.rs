@@ -15,7 +15,7 @@ const ALL: &'static str = "all";
 const UNGROUPED: &'static str = "ungrouped";
 const META: &'static str = "_meta";
 
-struct Inventory {
+pub struct Inventory {
     data: Value,
 }
 
@@ -220,7 +220,7 @@ fn test_add_host() {
         }
     }
     "#;
-        let expected: Value = serde_json::from_str(expected_str).unwrap();
+    let expected: Value = serde_json::from_str(expected_str).unwrap();
     let actual: Value = serde_json::from_str(&i.to_string()).unwrap();
     assert_eq!(expected, actual);
 }
